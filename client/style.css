@@ -38,3 +38,8 @@ h1 {
   width: 100%;
   max-width: 400px;
 }
+
+.modal-content .btn-close {
+  width: 1.5rem;
+  height: 1.5rem;
+}

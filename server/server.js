@@ -108,7 +108,7 @@ app.post('/api/posts', auth, async (req, res) => {
       link: '#',
       content,
       contentSnippet: content,
-      pubDate: new Date()
+      pubDate: new Date().toISOString()
     };
     if (useMemory) {
       Post.unshift(newPost);
