@@ -170,7 +170,9 @@
                       setIsSignUp(false);
                       resetAuthForm();
                     }}
-                  ></button>
+                  >
+                    X
+                  </button>
                   {isSignUp ? (
                     <form onSubmit={signUp}>
                       <h5 className="mb-3">Sign Up</h5>
@@ -263,7 +265,9 @@
                     type="button"
                     className="btn-close position-absolute top-0 end-0 m-2"
                     onClick={cancelEdit}
-                  ></button>
+                  >
+                    X
+                  </button>
                   <h5 className="mb-3">Edit Post</h5>
                   <input
                     className="form-control mb-2"
@@ -272,6 +276,7 @@
                   />
                   <textarea
                     className="form-control mb-3"
+                    rows="6"
                     value={editContent}
                     onChange={e => setEditContent(e.target.value)}
                   />
