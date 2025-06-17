@@ -1,0 +1,22 @@
+body {
+  background: #f8f9fa;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+h1 {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.card + .card {
+  margin-top: 1rem;
+}
+
+.card-title a {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.card-title a:hover {
+  text-decoration: underline;
+}
