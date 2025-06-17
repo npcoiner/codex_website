@@ -141,17 +141,9 @@
         <div className="container my-5">
         <div className="login-container d-flex justify-content-end mb-3">
             {token ? (
-              <div>
-                <button
-                  className="btn btn-primary me-2"
-                  onClick={() => setShowCreate(true)}
-                >
-                  New Post
-                </button>
-                <button className="btn btn-outline-secondary" onClick={logout}>
-                  Logout
-                </button>
-              </div>
+              <button className="btn btn-outline-secondary" onClick={logout}>
+                Logout
+              </button>
             ) : (
               <button
                 className="btn btn-primary"
@@ -343,7 +335,17 @@
               </div>
             </div>
           )}
-          <h1 className="mb-4 text-center">RSS Blog</h1>
+          <h1 className="mb-2 text-center">RSS Blog</h1>
+          {token && (
+            <div className="text-center mb-4">
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowCreate(true)}
+              >
+                New Post
+              </button>
+            </div>
+          )}
           {posts.map(post => (
             <div key={post._id || post.link} className="card mb-3 post-card">
               <div className="card-body">

@@ -49,12 +49,12 @@ h1 {
 }
 
 .modal-dialog {
-  width: 100%;
+  width: auto;
   max-width: 400px;
 }
 
 .edit-dialog {
-  width: 90%;
+  width: auto;
   max-width: 600px;
 }
 
