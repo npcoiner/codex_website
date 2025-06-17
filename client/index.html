@@ -21,8 +21,10 @@
       const [posts, setPosts] = useState([]);
       const [token, setToken] = useState(null);
       const [showLogin, setShowLogin] = useState(false);
+      const [isSignUp, setIsSignUp] = useState(false);
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
+      const [confirmPassword, setConfirmPassword] = useState('');
       const [newTitle, setNewTitle] = useState('');
       const [newContent, setNewContent] = useState('');
       const [editingId, setEditingId] = useState(null);
@@ -38,24 +40,44 @@
 
       useEffect(loadPosts, []);
 
+      const resetAuthForm = () => {
+        setUsername('');
+        setPassword('');
+        setConfirmPassword('');
+      };
+
       const login = e => {
         e.preventDefault();
-        fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        })
-          .then(res => {
-            if (!res.ok) throw new Error('Login failed');
-            return res.json();
-          })
-          .then(data => {
-            setToken(data.token);
-            setShowLogin(false);
-            setUsername('');
-            setPassword('');
-          })
-          .catch(err => alert(err.message));
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const found = users.find(
+          u => u.username === username && u.password === password
+        );
+        if (found) {
+          setToken(username);
+          setShowLogin(false);
+          resetAuthForm();
+        } else {
+          alert('Invalid credentials');
+        }
+      };
+
+      const signUp = e => {
+        e.preventDefault();
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        if (users.some(u => u.username === username)) {
+          alert('Username already exists');
+          return;
+        }
+        if (password !== confirmPassword) {
+          alert('Passwords do not match');
+          return;
+        }
+        users.push({ username, password });
+        localStorage.setItem('users', JSON.stringify(users));
+        setToken(username);
+        setShowLogin(false);
+        resetAuthForm();
+        setIsSignUp(false);
       };
 
       const logout = () => {
@@ -126,22 +148,98 @@
             )}
           </div>
           {showLogin && !token && (
-            <form onSubmit={login} className="mb-3">
-              <input
-                className="form-control mb-2"
-                placeholder="Username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-              />
-              <input
-                type="password"
-                className="form-control mb-2"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-              <button className="btn btn-success" type="submit">Login</button>
-            </form>
+            <div className="modal-overlay">
+              <div className="modal-dialog">
+                <div className="modal-content position-relative p-4">
+                  <button
+                    type="button"
+                    className="btn-close position-absolute top-0 end-0 m-2"
+                    onClick={() => {
+                      setShowLogin(false);
+                      setIsSignUp(false);
+                      resetAuthForm();
+                    }}
+                  ></button>
+                  {isSignUp ? (
+                    <form onSubmit={signUp}>
+                      <h5 className="mb-3">Sign Up</h5>
+                      <input
+                        className="form-control mb-2"
+                        placeholder="Username"
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                      />
+                      <input
+                        type="password"
+                        className="form-control mb-2"
+                        placeholder="Password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                      />
+                      <input
+                        type="password"
+                        className="form-control mb-3"
+                        placeholder="Confirm Password"
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                      />
+                      <div className="d-flex justify-content-between">
+                        <button className="btn btn-primary" type="submit">
+                          Sign Up
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-link"
+                          onClick={() => {
+                            setIsSignUp(false);
+                            resetAuthForm();
+                          }}
+                        >
+                          Back to Login
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <form onSubmit={login}>
+                      <h5 className="mb-3">Login</h5>
+                      <input
+                        className="form-control mb-2"
+                        placeholder="Username"
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                      />
+                      <input
+                        type="password"
+                        className="form-control mb-2"
+                        placeholder="Password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                      />
+                      <div className="d-flex justify-content-between align-items-center">
+                        <button className="btn btn-success" type="submit">
+                          Login
+                        </button>
+                        <div>
+                          <button
+                            type="button"
+                            className="btn btn-link me-2 p-0"
+                            onClick={() => {
+                              setIsSignUp(true);
+                              resetAuthForm();
+                            }}
+                          >
+                            Sign Up
+                          </button>
+                          <a href="forgot.html" className="btn btn-link p-0">
+                            Forgot Password?
+                          </a>
+                        </div>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
           {token && (
             <form onSubmit={createPost} className="mb-4">
