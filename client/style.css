@@ -58,6 +58,11 @@ h1 {
   max-width: 600px;
 }
 
+/* Ensure textarea spans the full modal width */
+.edit-dialog textarea.form-control {
+  width: 100%;
+}
+
 .modal-content .btn-close {
   width: 1.5rem;
   height: 1.5rem;
