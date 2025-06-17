@@ -30,6 +30,7 @@
       const [editingId, setEditingId] = useState(null);
       const [editTitle, setEditTitle] = useState('');
       const [editContent, setEditContent] = useState('');
+      const [showCreate, setShowCreate] = useState(false);
 
       const loadPosts = () => {
         fetch('/api/posts')
@@ -99,6 +100,7 @@
             setPosts([post, ...posts]);
             setNewTitle('');
             setNewContent('');
+            setShowCreate(false);
           });
       };
 
@@ -139,9 +141,17 @@
         <div className="container my-5">
         <div className="login-container d-flex justify-content-end mb-3">
             {token ? (
-              <button className="btn btn-outline-secondary" onClick={logout}>
-                Logout
-              </button>
+              <div>
+                <button
+                  className="btn btn-primary me-2"
+                  onClick={() => setShowCreate(true)}
+                >
+                  New Post
+                </button>
+                <button className="btn btn-outline-secondary" onClick={logout}>
+                  Logout
+                </button>
+              </div>
             ) : (
               <button
                 className="btn btn-primary"
@@ -295,25 +305,43 @@
               </div>
             </div>
           )}
-          {token && (
-            <form onSubmit={createPost} className="mb-4">
-              <h5>Create Post</h5>
-              <input
-                className="form-control mb-2"
-                placeholder="Title"
-                value={newTitle}
-                onChange={e => setNewTitle(e.target.value)}
-                required
-              />
-              <textarea
-                className="form-control mb-2"
-                placeholder="Content"
-                value={newContent}
-                onChange={e => setNewContent(e.target.value)}
-                required
-              />
-              <button className="btn btn-primary" type="submit">Submit</button>
-            </form>
+          {showCreate && token && (
+            <div
+              className="modal-overlay"
+              onClick={() => setShowCreate(false)}
+            >
+              <div className="modal-dialog edit-dialog" onClick={e => e.stopPropagation()}>
+                <div className="modal-content position-relative p-4">
+                  <button
+                    type="button"
+                    className="btn-close position-absolute top-0 end-0 m-2"
+                    onClick={() => setShowCreate(false)}
+                  >
+                    X
+                  </button>
+                  <h5 className="mb-3">Create Post</h5>
+                  <form onSubmit={createPost}>
+                    <input
+                      className="form-control mb-2"
+                      placeholder="Title"
+                      value={newTitle}
+                      onChange={e => setNewTitle(e.target.value)}
+                      required
+                    />
+                    <textarea
+                      className="form-control mb-2"
+                      placeholder="Content"
+                      value={newContent}
+                      onChange={e => setNewContent(e.target.value)}
+                      required
+                    ></textarea>
+                    <button className="btn btn-primary" type="submit">
+                      Submit
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
           )}
           <h1 className="mb-4 text-center">RSS Blog</h1>
           {posts.map(post => (
