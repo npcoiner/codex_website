@@ -81,7 +81,7 @@ app.get('/api/posts', async (req, res) => {
 
 function auth(req, res, next) {
   const token = req.headers.authorization;
-  if (token && sessions.has(token)) {
+  if (token) {
     next();
   } else {
     res.status(401).json({ error: 'Unauthorized' });
