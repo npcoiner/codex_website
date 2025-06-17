@@ -4,10 +4,9 @@
   <meta charset="UTF-8" />
   <title>RSS Blog</title>
   <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-    integrity="sha384-ysQoXrI1kTwWwXImQxGc1dQc5sKXc5teLoI0lp4rWuIwoMvVJE9idh+NRONSOX4p"
-    crossorigin="anonymous"
+  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
+  rel="stylesheet"
+  integrity="sha384-ysQoXrI1kTwWwXImQxGc1dQc5sKXc5teLoI0lp4rWuIwoMvVJE9idh+NRONSOX4p"
   />
   <link rel="stylesheet" href="style.css" />
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -168,8 +167,8 @@
           {posts.map(post => (
             <div key={post._id || post.link} className="card mb-3">
               <div className="card-body">
-                {editingId === post._id ? (
-                  <>
+		{editingId === post._id ? (
+                  <React.Fragment>
                     <input
                       className="form-control mb-2"
                       value={editTitle}
@@ -192,9 +191,9 @@
                     >
                       Cancel
                     </button>
-                  </>
+                  </React.Fragment>
                 ) : (
-                  <>
+                  <React.Fragment>
                     <h5 className="card-title">
                       <a href={post.link} target="_blank" rel="noopener">
                         {post.title}
@@ -222,7 +221,7 @@
                         </button>
                       </div>
                     )}
-                  </>
+                  </React.Fragment>
                 )}
               </div>
             </div>
