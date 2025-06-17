@@ -20,29 +20,210 @@
     const { useState, useEffect } = React;
     function App() {
       const [posts, setPosts] = useState([]);
-      useEffect(() => {
+      const [token, setToken] = useState(null);
+      const [showLogin, setShowLogin] = useState(false);
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [newTitle, setNewTitle] = useState('');
+      const [newContent, setNewContent] = useState('');
+      const [editingId, setEditingId] = useState(null);
+      const [editTitle, setEditTitle] = useState('');
+      const [editContent, setEditContent] = useState('');
+
+      const loadPosts = () => {
         fetch('/api/posts')
           .then(res => res.json())
           .then(data => setPosts(data))
           .catch(err => console.error(err));
-      }, []);
+      };
+
+      useEffect(loadPosts, []);
+
+      const login = e => {
+        e.preventDefault();
+        fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        })
+          .then(res => {
+            if (!res.ok) throw new Error('Login failed');
+            return res.json();
+          })
+          .then(data => {
+            setToken(data.token);
+            setShowLogin(false);
+            setUsername('');
+            setPassword('');
+          })
+          .catch(err => alert(err.message));
+      };
+
+      const logout = () => {
+        setToken(null);
+      };
+
+      const createPost = e => {
+        e.preventDefault();
+        fetch('/api/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: token
+          },
+          body: JSON.stringify({ title: newTitle, content: newContent })
+        })
+          .then(res => res.json())
+          .then(post => {
+            setPosts([post, ...posts]);
+            setNewTitle('');
+            setNewContent('');
+          });
+      };
+
+      const startEdit = post => {
+        setEditingId(post._id);
+        setEditTitle(post.title);
+        setEditContent(post.content);
+      };
+
+      const saveEdit = id => {
+        fetch(`/api/posts/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: token
+          },
+          body: JSON.stringify({ title: editTitle, content: editContent })
+        })
+          .then(res => res.json())
+          .then(updated => {
+            setPosts(posts.map(p => (p._id === id ? updated : p)));
+            setEditingId(null);
+          });
+      };
+
+      const deletePost = id => {
+        fetch(`/api/posts/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: token }
+        }).then(() => setPosts(posts.filter(p => p._id !== id)));
+      };
+
       return (
         <div className="container my-5">
+          <div className="d-flex justify-content-end mb-3">
+            {token ? (
+              <button className="btn btn-outline-secondary" onClick={logout}>
+                Logout
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowLogin(s => !s)}
+              >
+                Login
+              </button>
+            )}
+          </div>
+          {showLogin && !token && (
+            <form onSubmit={login} className="mb-3">
+              <input
+                className="form-control mb-2"
+                placeholder="Username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+              />
+              <input
+                type="password"
+                className="form-control mb-2"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+              <button className="btn btn-success" type="submit">Login</button>
+            </form>
+          )}
+          {token && (
+            <form onSubmit={createPost} className="mb-4">
+              <h5>Create Post</h5>
+              <input
+                className="form-control mb-2"
+                placeholder="Title"
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                required
+              />
+              <textarea
+                className="form-control mb-2"
+                placeholder="Content"
+                value={newContent}
+                onChange={e => setNewContent(e.target.value)}
+                required
+              />
+              <button className="btn btn-primary" type="submit">Submit</button>
+            </form>
+          )}
           <h1 className="mb-4 text-center">RSS Blog</h1>
           {posts.map(post => (
-            <div key={post.link} className="card mb-3">
+            <div key={post._id || post.link} className="card mb-3">
               <div className="card-body">
-                <h5 className="card-title">
-                  <a href={post.link} target="_blank" rel="noopener">
-                    {post.title}
-                  </a>
-                </h5>
-                <p className="card-text">{post.contentSnippet}</p>
-                <p className="card-text">
-                  <small className="text-muted">
-                    {new Date(post.pubDate).toLocaleString()}
-                  </small>
-                </p>
+                {editingId === post._id ? (
+                  <>
+                    <input
+                      className="form-control mb-2"
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                    />
+                    <textarea
+                      className="form-control mb-2"
+                      value={editContent}
+                      onChange={e => setEditContent(e.target.value)}
+                    />
+                    <button
+                      className="btn btn-primary btn-sm me-2"
+                      onClick={() => saveEdit(post._id)}
+                    >
+                      Save
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setEditingId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h5 className="card-title">
+                      <a href={post.link} target="_blank" rel="noopener">
+                        {post.title}
+                      </a>
+                    </h5>
+                    <p className="card-text">{post.contentSnippet}</p>
+                    <p className="card-text">
+                      <small className="text-muted">
+                        {new Date(post.pubDate).toLocaleString()}
+                      </small>
+                    </p>
+                    {token && (
+                      <div>
+                        <button
+                          className="btn btn-sm btn-outline-primary me-2"
+                          onClick={() => startEdit(post)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => deletePost(post._id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           ))}
