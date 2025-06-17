@@ -8,8 +8,22 @@ h1 {
   text-align: center;
 }
 
+.login-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1100;
+}
+
 .card + .card {
   margin-top: 1rem;
+}
+
+.post-card {
+  width: 75%;
+  max-width: 800px;
+  margin: 0 auto 1rem;
+  min-height: 20vh;
 }
 
 .card-title a {
@@ -37,6 +51,11 @@ h1 {
 .modal-dialog {
   width: 100%;
   max-width: 400px;
+}
+
+.edit-dialog {
+  width: 90%;
+  max-width: 600px;
 }
 
 .modal-content .btn-close {
