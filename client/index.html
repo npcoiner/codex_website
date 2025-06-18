@@ -138,10 +138,10 @@
         <div className="container my-5">
           <div className="login-container d-flex justify-content-end mb-3">
             {token ? (
-              <>
+              <React.Fragment>
                 <button className="btn btn-outline-secondary me-2" onClick={() => setShowManage(true)}>Manage Feeds</button>
                 <button className="btn btn-outline-secondary" onClick={logout}>Logout</button>
-              </>
+              </React.Fragment>
             ) : (
               <button className="btn btn-primary" onClick={() => setShowLogin(s => !s)}>Login</button>
             )}
