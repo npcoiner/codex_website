@@ -39,7 +39,7 @@ async function connectMongo() {
 
 
 async function fetchPosts() {
-  const feedUrl = process.env.RSS_URL || 'https://hnrss.org/frontpage';
+  const feedUrl = process.env.RSS_URL || 'https://rss.arxiv.org/rss/cs';
   const feed = await parser.parseURL(feedUrl);
   const posts = feed.items.map((item, idx) => ({
     _id: `${++memoryId}`,
