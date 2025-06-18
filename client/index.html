@@ -2,13 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>RSS Blog</title>
-  <link
-  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
-  rel="stylesheet"
-  integrity="sha384-ysQoXrI1kTwWwXImQxGc1dQc5sKXc5teLoI0lp4rWuIwoMvVJE9idh+NRONSOX4p"
-  />
+  <title>RSS Reader</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script src="config.js"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script crossorigin src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
@@ -17,29 +14,57 @@
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect } = React;
+    const DEFAULT_FEEDS = [window.DEFAULT_FEED || 'https://rss.arxiv.org/rss/cs'];
+
     function App() {
       const [posts, setPosts] = useState([]);
-      const [token, setToken] = useState(null);
+      const [feeds, setFeeds] = useState(DEFAULT_FEEDS);
+      const [errors, setErrors] = useState([]);
+      const [token, setToken] = useState(localStorage.getItem('currentUser'));
       const [showLogin, setShowLogin] = useState(false);
       const [isSignUp, setIsSignUp] = useState(false);
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
       const [confirmPassword, setConfirmPassword] = useState('');
-      const [newTitle, setNewTitle] = useState('');
-      const [newContent, setNewContent] = useState('');
-      const [editingId, setEditingId] = useState(null);
-      const [editTitle, setEditTitle] = useState('');
-      const [editContent, setEditContent] = useState('');
-      const [showCreate, setShowCreate] = useState(false);
+      const [showManage, setShowManage] = useState(false);
+      const [newFeed, setNewFeed] = useState('');
 
-      const loadPosts = () => {
-        fetch('/api/posts')
-          .then(res => res.json())
-          .then(data => setPosts(data))
-          .catch(err => console.error(err));
-      };
+      useEffect(() => {
+        if (token) {
+          const users = JSON.parse(localStorage.getItem('users') || '[]');
+          const user = users.find(u => u.username === token);
+          if (user && user.feeds && user.feeds.length) {
+            setFeeds(user.feeds);
+          } else {
+            setFeeds(DEFAULT_FEEDS);
+          }
+        } else {
+          setFeeds(DEFAULT_FEEDS);
+        }
+      }, [token]);
 
-      useEffect(loadPosts, []);
+      useEffect(() => {
+        if (!feeds.length) return;
+        setErrors([]);
+        Promise.all(
+          feeds.map(url =>
+            fetch(`/api/feed?url=${encodeURIComponent(url)}`)
+              .then(res => {
+                if (!res.ok) throw { url, status: res.status };
+                return res.json();
+              })
+              .then(items => items.map(i => ({ ...i, feedUrl: url })))
+              .catch(err => {
+                setErrors(e => [...e, { url: err.url, status: err.status }]);
+                return [];
+              })
+          )
+        ).then(results => {
+          const all = results.flat();
+          all.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+          setPosts(all);
+        });
+      }, [feeds]);
 
       const resetAuthForm = () => {
         setUsername('');
@@ -50,11 +75,10 @@
       const login = e => {
         e.preventDefault();
         const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const found = users.find(
-          u => u.username === username && u.password === password
-        );
+        const found = users.find(u => u.username === username && u.password === password);
         if (found) {
           setToken(username);
+          localStorage.setItem('currentUser', username);
           setShowLogin(false);
           resetAuthForm();
         } else {
@@ -73,9 +97,10 @@
           alert('Passwords do not match');
           return;
         }
-        users.push({ username, password });
+        users.push({ username, password, feeds: DEFAULT_FEEDS });
         localStorage.setItem('users', JSON.stringify(users));
         setToken(username);
+        localStorage.setItem('currentUser', username);
         setShowLogin(false);
         resetAuthForm();
         setIsSignUp(false);
@@ -83,171 +108,70 @@
 
       const logout = () => {
         setToken(null);
+        localStorage.removeItem('currentUser');
       };
 
-      const createPost = e => {
+      const saveFeeds = list => {
+        setFeeds(list);
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const idx = users.findIndex(u => u.username === token);
+        if (idx !== -1) {
+          users[idx].feeds = list;
+          localStorage.setItem('users', JSON.stringify(users));
+        }
+      };
+
+      const addFeed = e => {
         e.preventDefault();
-        fetch('/api/posts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: token
-          },
-          body: JSON.stringify({ title: newTitle, content: newContent })
-        })
-          .then(res => res.json())
-          .then(post => {
-            setPosts([post, ...posts]);
-            setNewTitle('');
-            setNewContent('');
-            setShowCreate(false);
-          });
+        const url = newFeed.trim();
+        if (url && !feeds.includes(url)) {
+          saveFeeds([...feeds, url]);
+        }
+        setNewFeed('');
       };
 
-      const startEdit = post => {
-        setEditingId(post._id);
-        setEditTitle(post.title);
-        setEditContent(post.content);
-      };
-
-      const cancelEdit = () => {
-        setEditingId(null);
-      };
-
-      const saveEdit = id => {
-        fetch(`/api/posts/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: token
-          },
-          body: JSON.stringify({ title: editTitle, content: editContent })
-        })
-          .then(res => res.json())
-          .then(updated => {
-            setPosts(posts.map(p => (p._id === id ? updated : p)));
-            setEditingId(null);
-          });
-      };
-
-      const deletePost = id => {
-        fetch(`/api/posts/${id}`, {
-          method: 'DELETE',
-          headers: { Authorization: token }
-        }).then(() => setPosts(posts.filter(p => p._id !== id)));
+      const removeFeed = url => {
+        saveFeeds(feeds.filter(f => f !== url));
       };
 
       return (
         <div className="container my-5">
-        <div className="login-container d-flex justify-content-end mb-3">
+          <div className="login-container d-flex justify-content-end mb-3">
             {token ? (
-              <button className="btn btn-outline-secondary" onClick={logout}>
-                Logout
-              </button>
+              <React.Fragment>
+                <button className="btn btn-outline-secondary me-2" onClick={() => setShowManage(true)}>Manage Feeds</button>
+                <button className="btn btn-outline-secondary" onClick={logout}>Logout</button>
+              </React.Fragment>
             ) : (
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowLogin(s => !s)}
-              >
-                Login
-              </button>
+              <button className="btn btn-primary" onClick={() => setShowLogin(s => !s)}>Login</button>
             )}
           </div>
           {showLogin && !token && (
-            <div
-              className="modal-overlay"
-              onClick={() => {
-                setShowLogin(false);
-                setIsSignUp(false);
-                resetAuthForm();
-              }}
-            >
+            <div className="modal-overlay" onClick={() => { setShowLogin(false); setIsSignUp(false); resetAuthForm(); }}>
               <div className="modal-dialog" onClick={e => e.stopPropagation()}>
                 <div className="modal-content position-relative p-4">
-                  <button
-                    type="button"
-                    className="btn-close position-absolute top-0 end-0 m-2"
-                    onClick={() => {
-                      setShowLogin(false);
-                      setIsSignUp(false);
-                      resetAuthForm();
-                    }}
-                  >
-                    X
-                  </button>
+                  <button type="button" className="btn-close position-absolute top-0 end-0 m-2" onClick={() => { setShowLogin(false); setIsSignUp(false); resetAuthForm(); }}>X</button>
                   {isSignUp ? (
                     <form onSubmit={signUp}>
                       <h5 className="mb-3">Sign Up</h5>
-                      <input
-                        className="form-control mb-2"
-                        placeholder="Username"
-                        value={username}
-                        onChange={e => setUsername(e.target.value)}
-                      />
-                      <input
-                        type="password"
-                        className="form-control mb-2"
-                        placeholder="Password"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                      />
-                      <input
-                        type="password"
-                        className="form-control mb-3"
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                      />
+                      <input className="form-control mb-2" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
+                      <input type="password" className="form-control mb-2" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+                      <input type="password" className="form-control mb-3" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
                       <div className="d-flex justify-content-between">
-                        <button className="btn btn-primary" type="submit">
-                          Sign Up
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-link"
-                          onClick={() => {
-                            setIsSignUp(false);
-                            resetAuthForm();
-                          }}
-                        >
-                          Back to Login
-                        </button>
+                        <button className="btn btn-primary" type="submit">Sign Up</button>
+                        <button type="button" className="btn btn-link" onClick={() => { setIsSignUp(false); resetAuthForm(); }}>Back to Login</button>
                       </div>
                     </form>
                   ) : (
                     <form onSubmit={login}>
                       <h5 className="mb-3">Login</h5>
-                      <input
-                        className="form-control mb-2"
-                        placeholder="Username"
-                        value={username}
-                        onChange={e => setUsername(e.target.value)}
-                      />
-                      <input
-                        type="password"
-                        className="form-control mb-2"
-                        placeholder="Password"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                      />
+                      <input className="form-control mb-2" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
+                      <input type="password" className="form-control mb-2" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
                       <div className="d-flex justify-content-between align-items-center">
-                        <button className="btn btn-success" type="submit">
-                          Login
-                        </button>
+                        <button className="btn btn-success" type="submit">Login</button>
                         <div>
-                          <button
-                            type="button"
-                            className="btn btn-link me-2 p-0"
-                            onClick={() => {
-                              setIsSignUp(true);
-                              resetAuthForm();
-                            }}
-                          >
-                            Sign Up
-                          </button>
-                          <a href="forgot.html" className="btn btn-link p-0">
-                            Forgot Password?
-                          </a>
+                          <button type="button" className="btn btn-link me-2 p-0" onClick={() => { setIsSignUp(true); resetAuthForm(); }}>Sign Up</button>
+                          <a href="forgot.html" className="btn btn-link p-0">Forgot Password?</a>
                         </div>
                       </div>
                     </form>
@@ -256,131 +180,43 @@
               </div>
             </div>
           )}
-          {editingId && (
-            <div
-              className="modal-overlay"
-              onClick={cancelEdit}
-            >
+
+          {showManage && token && (
+            <div className="modal-overlay" onClick={() => setShowManage(false)}>
               <div className="modal-dialog edit-dialog" onClick={e => e.stopPropagation()}>
                 <div className="modal-content position-relative p-4">
-                  <button
-                    type="button"
-                    className="btn-close position-absolute top-0 end-0 m-2"
-                    onClick={cancelEdit}
-                  >
-                    X
-                  </button>
-                  <h5 className="mb-3">Edit Post</h5>
-                  <input
-                    className="form-control mb-2"
-                    value={editTitle}
-                    onChange={e => setEditTitle(e.target.value)}
-                  />
-                  <textarea
-                    className="form-control mb-3"
-                    rows="6"
-                    value={editContent}
-                    onChange={e => setEditContent(e.target.value)}
-                  />
-                  <div className="d-flex justify-content-end">
-                    <button
-                      className="btn btn-primary me-2"
-                      onClick={() => saveEdit(editingId)}
-                    >
-                      Save
-                    </button>
-                    <button className="btn btn-secondary" onClick={cancelEdit}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          {showCreate && token && (
-            <div
-              className="modal-overlay"
-              onClick={() => setShowCreate(false)}
-            >
-              <div className="modal-dialog edit-dialog" onClick={e => e.stopPropagation()}>
-                <div className="modal-content position-relative p-4">
-                  <button
-                    type="button"
-                    className="btn-close position-absolute top-0 end-0 m-2"
-                    onClick={() => setShowCreate(false)}
-                  >
-                    X
-                  </button>
-                  <h5 className="mb-3">Create Post</h5>
-                  <form onSubmit={createPost}>
-                    <input
-                      className="form-control mb-2"
-                      placeholder="Title"
-                      value={newTitle}
-                      onChange={e => setNewTitle(e.target.value)}
-                      required
-                    />
-                    <textarea
-                      className="form-control mb-2"
-                      placeholder="Content"
-                      value={newContent}
-                      onChange={e => setNewContent(e.target.value)}
-                      required
-                    ></textarea>
-                    <button className="btn btn-primary" type="submit">
-                      Submit
-                    </button>
+                  <button type="button" className="btn-close position-absolute top-0 end-0 m-2" onClick={() => setShowManage(false)}>X</button>
+                  <h5 className="mb-3">Manage Feeds</h5>
+                  <form onSubmit={addFeed} className="mb-3 d-flex">
+                    <input className="form-control me-2" placeholder="RSS URL" value={newFeed} onChange={e => setNewFeed(e.target.value)} />
+                    <button className="btn btn-primary" type="submit">Add</button>
                   </form>
+                  <ul className="list-group">
+                    {feeds.map(url => (
+                      <li key={url} className="list-group-item d-flex justify-content-between align-items-center">
+                        {url}
+                        <button type="button" className="btn btn-sm btn-danger" onClick={() => removeFeed(url)}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>
           )}
-          <h1 className="mb-2 text-center">RSS Blog</h1>
-          {token && (
-            <div className="mb-4 post-container text-start">
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowCreate(true)}
-              >
-                New Post
-              </button>
+
+          <h1 className="mb-2 text-center">RSS Reader</h1>
+          {errors.map(err => (
+            <div key={err.url} className="alert alert-danger w-75 mx-auto" role="alert">
+              Failed to load {err.url} (status {err.status})
             </div>
-          )}
+          ))}
           {posts.map(post => (
-            <div key={post._id || post.link} className="card mb-3 post-card">
+            <div key={post.link} className="card mb-3 post-card">
               <div className="card-body">
-                <h5 className="card-title">
-                  <a href={post.link} target="_blank" rel="noopener">
-                    {post.title}
-                  </a>
-                </h5>
+                <h5 className="card-title"><a href={post.link} target="_blank" rel="noopener">{post.title}</a></h5>
                 <p className="card-text">{post.contentSnippet}</p>
-                <p className="card-text">
-                  <small className="text-muted">
-                    {
-                      (() => {
-                        const d = new Date(post.pubDate);
-                        return isNaN(d) ? '' : d.toLocaleString();
-                      })()
-                    }
-                  </small>
-                </p>
-                {token && (
-                  <div>
-                    <button
-                      className="btn btn-sm btn-outline-primary me-2"
-                      onClick={() => startEdit(post)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => deletePost(post._id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
+                <p className="card-text"><small className="text-muted">{(() => { const d = new Date(post.pubDate); return isNaN(d) ? '' : d.toLocaleString(); })()}</small></p>
+                <p className="card-text"><small className="text-muted">{post.feedUrl}</small></p>
               </div>
             </div>
           ))}

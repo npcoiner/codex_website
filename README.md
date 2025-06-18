@@ -1,22 +1,20 @@
-# RSS Blog (MERN Example)
+# RSS Reader Example
 
-This is a minimal MERN stack example that loads an RSS feed and displays posts.
+This project provides a very small Express server and a static React front end for reading RSS feeds.  Users can sign up or log in in the browser (information is stored in `localStorage`) and maintain a personal list of RSS feed URLs.  When signed in, the application fetches all feeds in the list and displays the combined posts.  If any of the feeds fail to load, the error is shown while posts from the other feeds remain visible.
+
+When no user is logged in a default feed is used.
 
 ## Getting Started
 
-1. Install dependencies for the server:
+1. Install dependencies for the server
    ```bash
    cd server
    npm install
    ```
-
-2. Start the server:
+2. Start the server
    ```bash
    npm start
    ```
-   The server attempts to connect to `MONGO_URI` (defaults to `mongodb://localhost:27017/rssblog`).
-   If MongoDB is unavailable, it falls back to an in-memory store.
+3. Open `client/index.html` in your browser.
 
-3. Open `client/index.html` in your browser to view the posts.
-
-The RSS feed URL can be configured with the `RSS_URL` environment variable.
+The default RSS feed can be configured with the `RSS_URL` environment variable.
